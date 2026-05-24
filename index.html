@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 思想家辩论场</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   辩论场 — 学术辩论厅 / 古籍长卷风格
+   ============================================================ */
+:root {
+  --parchment: #F4E4C1;
+  --parchment-dark: #E8D5A3;
+  --wood-dark: #3E2723;
+  --wood-mid: #5D3A1A;
+  --wine: #6B2020;
+  --wine-light: #8B3A3A;
+  --gold: #C8A96E;
+  --gold-dim: #8B7355;
+  --ink: #1A1A1A;
+  --ink-light: #4A4A4A;
+  --bg: #2C1810;
+  --bg-panel: #1F1108;
+  --card-bg: rgba(62,39,35,0.85);
+  --text-on-dark: #E8D5A3;
+  --font-title: 'Cinzel', 'Noto Serif SC', serif;
+  --font-heading: 'Playfair Display', 'Noto Serif SC', serif;
+  --font-body: 'Cormorant Garamond', 'Noto Serif SC', serif;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(107,32,32,0.15) 0%, transparent 60%),
+    radial-gradient(ellipse at 0% 100%, rgba(62,39,35,0.3) 0%, transparent 40%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%233E2723' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  font-family: var(--font-body);
+  color: var(--text-on-dark);
+  min-height: 100vh;
+  padding-bottom: 40px;
+}
+
+/* --- 顶部标题栏 --- */
+header {
+  text-align: center;
+  padding: 28px 20px 16px;
+  border-bottom: 3px double var(--gold-dim);
+  margin-bottom: 24px;
+  position: relative;
+}
+header::after {
+  content: ''; position: absolute; bottom: -6px; left: 10%; right: 10%;
+  height: 1px; background: var(--gold-dim);
+}
+header h1 {
+  font-family: var(--font-title);
+  font-size: clamp(22px, 4vw, 34px);
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 6px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+header .subtitle {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  color: var(--gold-dim);
+  letter-spacing: 3px;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+/* --- 主布局 --- */
+#app {
+  max-width: 1300px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 24px;
+}
+@media (max-width: 900px) {
+  #app { grid-template-columns: 1fr; padding: 0 10px; }
+  #setup-panel { order: -1; }
+  .speaker-card { min-width: 90px; padding: 10px 12px; }
+  .speaker-card canvas { width: 50px; height: 50px; }
+  .speaker-card .s-name { font-size: 12px; }
+  #debate-log { max-height: 40vh; padding: 12px; }
+  .speech { margin-left: 10px; padding: 10px 12px; }
+  .speech .sp-content { font-size: 13px; }
+  header h1 { font-size: 18px; letter-spacing: 3px; }
+}
+@media (max-width: 480px) {
+  .speaker-card { min-width: 70px; padding: 8px; }
+  .speaker-card canvas { width: 40px; height: 40px; }
+  .speaker-card .s-name { font-size: 11px; }
+  .mode-btns { grid-template-columns: 1fr; }
+  .speech .sp-content { font-size: 12px; }
+  #btn-start { font-size: 14px; padding: 10px; }
+}
+
+/* --- 左侧设置面板 --- */
+#setup-panel {
+  background: var(--bg-panel);
+  border: 2px solid var(--wood-mid);
+  border-radius: 6px;
+  padding: 20px;
+  box-shadow: inset 0 0 30px rgba(0,0,0,0.3), 0 4px 20px rgba(0,0,0,0.4);
+  position: relative;
+}
+#setup-panel::before {
+  content: ''; position: absolute; inset: 4px;
+  border: 1px solid rgba(200,169,110,0.2);
+  border-radius: 3px; pointer-events: none;
+}
+#setup-panel h3 {
+  font-family: var(--font-title);
+  font-size: 15px;
+  color: var(--gold);
+  letter-spacing: 3px;
+  margin-bottom: 16px;
+  text-align: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--wood-mid);
+}
+.setup-group {
+  margin-bottom: 16px;
+}
+.setup-group label {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: 12px;
+  color: var(--gold-dim);
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.setup-group textarea, .setup-group input {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(244,228,193,0.08);
+  border: 1px solid var(--wood-mid);
+  color: var(--parchment);
+  font-family: var(--font-body);
+  font-size: 14px;
+  border-radius: 3px;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+.setup-group textarea:focus, .setup-group input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+.setup-group textarea { min-height: 60px; }
+
+.mode-btns {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+}
+.mode-btn {
+  padding: 10px 8px;
+  background: rgba(244,228,193,0.05);
+  border: 1px solid var(--wood-mid);
+  color: var(--parchment-dark);
+  font-family: var(--font-heading);
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.2s;
+  text-align: center;
+  letter-spacing: 1px;
+}
+.mode-btn:hover { border-color: var(--gold); color: var(--gold); }
+.mode-btn.active {
+  background: rgba(200,169,110,0.12);
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 700;
+}
+
+#btn-start {
+  width: 100%; padding: 12px;
+  background: var(--wine);
+  border: 2px solid var(--wine-light);
+  color: var(--parchment);
+  font-family: var(--font-title);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  border-radius: 4px;
+  letter-spacing: 4px;
+  transition: all 0.2s;
+  margin-top: 6px;
+}
+#btn-start:hover { background: var(--wine-light); }
+#btn-start:disabled { opacity: 0.4; cursor: not-allowed; }
+
+#btn-continue {
+  width: 100%; padding: 10px; margin-top: 8px;
+  background: transparent;
+  border: 1px solid var(--gold-dim);
+  color: var(--gold-dim);
+  font-family: var(--font-title);
+  font-size: 13px; cursor: pointer;
+  border-radius: 4px; letter-spacing: 2px;
+  transition: all 0.2s;
+  display: none;
+}
+#btn-continue:hover { border-color: var(--gold); color: var(--gold); }
+
+/* --- 右侧主区域 --- */
+#main-area {
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+/* --- 当前发言人卡片 --- */
+#speaker-cards {
+  display: flex; gap: 14px; flex-wrap: wrap; justify-content: center;
+}
+.speaker-card {
+  background: var(--card-bg);
+  border: 2px solid var(--wood-mid);
+  border-radius: 6px;
+  padding: 14px 18px;
+  text-align: center;
+  min-width: 120px;
+  flex: 1; max-width: 200px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  transition: all 0.3s;
+  position: relative;
+}
+.speaker-card.active-speaker {
+  border-color: var(--gold);
+  box-shadow: 0 0 24px rgba(200,169,110,0.25);
+  animation: glow 2s ease-in-out infinite;
+}
+@keyframes glow {
+  0%,100% { box-shadow: 0 0 16px rgba(200,169,110,0.2); }
+  50% { box-shadow: 0 0 32px rgba(200,169,110,0.4); }
+}
+.speaker-card canvas {
+  image-rendering: pixelated; image-rendering: crisp-edges;
+  border: 2px solid var(--wood-mid); border-radius: 2px;
+  margin-bottom: 8px;
+}
+.speaker-card .s-name {
+  font-family: var(--font-heading);
+  font-size: 14px; font-weight: 700;
+  color: var(--gold); letter-spacing: 1px;
+}
+.speaker-card .s-school {
+  font-size: 10px; color: var(--gold-dim);
+  margin-top: 2px; letter-spacing: 1px;
+}
+.speaker-card .s-speaking {
+  position: absolute; top: -8px; right: -8px;
+  background: var(--wine); color: var(--parchment);
+  font-size: 9px; padding: 3px 8px; border-radius: 10px;
+  letter-spacing: 1px; display: none;
+}
+.speaker-card.active-speaker .s-speaking { display: block; }
+
+/* --- 辩论记录区 --- */
+#debate-log {
+  background: var(--bg-panel);
+  border: 2px solid var(--wood-mid);
+  border-radius: 6px;
+  padding: 20px;
+  min-height: 300px;
+  max-height: 55vh;
+  overflow-y: auto;
+  box-shadow: inset 0 0 30px rgba(0,0,0,0.3);
+  position: relative;
+}
+#debate-log::before {
+  content: ''; position: absolute; inset: 4px;
+  border: 1px solid rgba(200,169,110,0.15);
+  border-radius: 3px; pointer-events: none;
+}
+
+/* 空状态 */
+.empty-state {
+  text-align: center; padding: 60px 20px;
+  color: var(--gold-dim);
+  font-family: var(--font-heading);
+  font-style: italic; font-size: 15px;
+  letter-spacing: 2px;
+  opacity: 0.6;
+}
+
+/* 主持人消息 */
+.mod-msg {
+  text-align: center;
+  padding: 10px 20px; margin: 12px 0;
+  font-family: var(--font-heading);
+  font-size: 13px;
+  color: var(--gold);
+  letter-spacing: 2px;
+  border-top: 1px solid var(--wood-mid);
+  border-bottom: 1px solid var(--wood-mid);
+  font-style: italic;
+}
+
+/* 发言气泡 — 羊皮纸风格 */
+.speech {
+  background: linear-gradient(135deg, rgba(244,228,193,0.12) 0%, rgba(244,228,193,0.06) 100%);
+  border: 1px solid rgba(200,169,110,0.25);
+  border-radius: 4px;
+  padding: 14px 18px;
+  margin: 10px 0 10px 20px;
+  position: relative;
+  transition: background 0.2s;
+}
+.speech::before {
+  content: ''; position: absolute; left: -8px; top: 16px;
+  width: 0; height: 0;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-right: 8px solid rgba(200,169,110,0.25);
+}
+.speech.highlight { background: rgba(200,169,110,0.18); border-color: var(--gold); }
+.speech .sp-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.speech .sp-avatar {
+  width: 40px; height: 40px;
+  image-rendering: pixelated; image-rendering: crisp-edges;
+  border: 1px solid var(--wood-mid);
+}
+.speech .sp-name {
+  font-family: var(--font-heading);
+  font-size: 14px; font-weight: 700;
+  color: var(--gold); letter-spacing: 1px;
+}
+.speech .sp-round {
+  font-size: 10px; color: var(--gold-dim);
+  margin-left: auto;
+}
+.speech .sp-content {
+  font-family: var(--font-body);
+  font-size: 15px; line-height: 1.7;
+  color: var(--parchment-dark);
+}
+.speech .sp-content em { color: var(--gold); font-style: italic; }
+.speech .sp-content strong { color: #fff; }
+
+/* 观众投票条 */
+.vote-bar {
+  display: flex; align-items: center; gap: 8px;
+  margin: 8px 0 8px 20px; font-size: 11px;
+  color: var(--gold-dim);
+}
+.vote-track {
+  flex: 1; height: 4px; background: var(--wood-mid);
+  border-radius: 2px; overflow: hidden;
+}
+.vote-fill {
+  height: 100%; background: var(--gold);
+  border-radius: 2px; transition: width 0.5s;
+}
+
+/* 金句高亮 */
+.golden-quote {
+  border-left: 3px solid var(--gold);
+  padding-left: 12px; margin: 8px 0;
+  font-style: italic; color: var(--gold) !important;
+}
+
+/* --- 底部信息栏 --- */
+#info-bar {
+  display: flex; justify-content: space-between;
+  align-items: center; padding: 10px 0;
+  font-size: 11px; color: var(--gold-dim);
+  letter-spacing: 1px;
+}
+
+/* 滚动条 */
+#debate-log::-webkit-scrollbar { width: 6px; }
+#debate-log::-webkit-scrollbar-track { background: transparent; }
+#debate-log::-webkit-scrollbar-thumb { background: var(--wood-mid); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>AI 思想家辩论场</h1>
+  <p class="subtitle">— Forum of Minds · 古今中外 · 百家争鸣 —</p>
+</header>
+
+<div id="app">
+  <!-- 左侧面板 -->
+  <aside id="setup-panel">
+    <h3>◆ 辩论设置 ◆</h3>
+    <div class="setup-group">
+      <label>辩论主题</label>
+      <textarea id="topic-input" placeholder="输入辩论主题...&#10;例如：人工智能是否应当拥有人权？">人性本善还是本恶？</textarea>
+    </div>
+    <div class="setup-group">
+      <label>辩论模式</label>
+      <div class="mode-btns" id="mode-btns">
+        <button class="mode-btn active" data-mode="A">中 vs 西 1v1</button>
+        <button class="mode-btn" data-mode="B">中方内战</button>
+        <button class="mode-btn" data-mode="C">西方内战</button>
+        <button class="mode-btn" data-mode="D">三人混战</button>
+      </div>
+    </div>
+    <button id="btn-start" onclick="startDebate()">开 始 辩 论</button>
+    <button id="btn-continue" onclick="continueDebate()">继 续 辩 论</button>
+    <div style="margin-top:16px;text-align:center;font-size:10px;color:var(--gold-dim);">
+      已辩论 <span id="round-num">0</span> 轮
+    </div>
+  </aside>
+
+  <!-- 右侧主区域 -->
+  <div id="main-area">
+    <div id="speaker-cards"></div>
+    <div id="debate-log">
+      <div class="empty-state" id="empty-state">
+        请设置辩论主题与模式<br>点击「开始辩论」抽取思想家
+      </div>
+    </div>
+    <div id="info-bar">
+      <span id="vote-status"></span>
+      <span id="stalemate-warn"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// 1. 工具函数
+// ============================================================
+function createRNG(seed) {
+  let s = seed | 0;
+  return () => { s = s + 0x6D2B79F5 | 0; let t = Math.imul(s ^ s >>> 15, 1 | s); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+function hashStr(s) { let h = 0; for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; } return h; }
+function pick(arr, rng) { return arr[Math.floor(rng() * arr.length)]; }
+function shuffle(arr, rng) { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+// ============================================================
+// 2. 像素头像生成器 (64×64 黑白)
+// ============================================================
+function generateAvatar(name, size = 64) {
+  const rng = createRNG(hashStr(name));
+  const c = document.createElement('canvas'); c.width = size; c.height = size;
+  const ctx = c.getContext('2d'); const d = ctx.createImageData(size, size);
+  const B = [0,0,0,255], W = [255,255,255,255];
+  function sp(x,y,clr) { x=Math.round(x);y=Math.round(y); if(x<0||y<0||x>=size||y>=size)return; const i=(y*size+x)*4; d.data[i]=clr[0];d.data[i+1]=clr[1];d.data[i+2]=clr[2];d.data[i+3]=clr[3]; }
+  function fr(x,y,w,h,clr) { for(let dy=0;dy<h;dy++) for(let dx=0;dx<w;dx++) sp(x+dx,y+dy,clr); }
+  function fc(cx,cy,r,clr) { for(let dy=-r;dy<=r;dy++) for(let dx=-r;dx<=r;dx++) if(dx*dx+dy*dy<=r*r+1) sp(cx+dx,cy+dy,clr); }
+  function fe(cx,cy,rx,ry,clr) { for(let dy=-ry;dy<=ry;dy++) for(let dx=-rx;dx<=rx;dx++) if((dx*dx)/(rx*rx)+(dy*dy)/(ry*ry)<=1) sp(cx+dx,cy+dy,clr); }
+
+  fr(0,0,size,size,W);
+  const cx=32+(rng()-0.5)*2, cy=30+(rng()-0.5)*2;
+  const fW=24+Math.floor(rng()*8), fH=30+Math.floor(rng()*6);
+  const eyeY=cy-4, eSpace=5+Math.floor(rng()*2), eW=3+Math.floor(rng()*2), eH=2;
+  const noseY=cy+2, nH=4+Math.floor(rng()*2);
+  const mouthY=cy+9, mW=7+Math.floor(rng()*4);
+  const hStyle=Math.floor(rng()*6), bStyle=Math.floor(rng()*4);
+  const thickBrow=rng()<0.35;
+
+  // 头发
+  if(hStyle===0){fr(cx-fW/2-2,cy-fH/2,3,5,B);fr(cx+fW/2-1,cy-fH/2,3,5,B);}
+  else if(hStyle===1) fr(cx-fW/2-4,cy-fH/2-2,fW+8,10,B);
+  else if(hStyle===2){fc(cx,cy-fH/2-2,fH*0.55,B);fe(cx,cy,fW/2+1,fH/2,W);}
+  else if(hStyle===3){fr(cx-fW/2-6,cy-fH/2-3,fW+12,fH+10,B);fe(cx,cy,fW/2+1,fH/2,W);}
+  else if(hStyle===4){fr(cx-fW/2-2,cy-fH/2-1,fW+4,8,B);fc(cx,cy-fH/2-6,5+rng()*3,B);}
+  else {fr(cx-fW/2-5,cy-fH/2,fW+10,6,B);fr(cx-fW/2-4,cy-fH/2-4,fW+8,4,B);fr(cx-5,cy-fH/2-5,10,6,W);}
+
+  // 脸
+  fe(cx,cy,fW/2,fH/2,W);
+  for(let dy=-fH/2;dy<=fH/2;dy++){const rx=Math.sqrt(Math.max(0,1-(dy*dy)/((fH/2)*(fH/2))))*(fW/2);sp(cx-rx,cy+dy,B);sp(cx+rx,cy+dy,B);}
+
+  // 眉
+  const bW=eW+3+(thickBrow?2:0), bH=thickBrow?3:2, bY=eyeY-4;
+  fr(cx-eSpace-bW/2,bY,bW,bH,B); fr(cx+eSpace-bW/2,bY,bW,bH,B);
+  // 眼
+  function de(ex,ey){fr(ex-eW/2,ey-eH/2,eW,eH,B);sp(ex+(rng()>0.5?1:-1),ey,W);}
+  de(cx-eSpace,eyeY); de(cx+eSpace,eyeY);
+  // 鼻
+  fr(cx-1,noseY,2,nH,B); sp(cx-3,noseY+2,B); sp(cx+3,noseY+2,B);
+  // 嘴
+  fr(cx-mW/2,mouthY,mW,2,B);
+  // 胡
+  if(bStyle===1) fr(cx-fW/4,mouthY+2,fW/2,4,B);
+  else if(bStyle===2){fr(cx-fW/2+2,mouthY+2,fW-4,fH*0.35,B);for(let i=0;i<8;i++)sp(cx-fW/4+rng()*fW/2,mouthY+3+rng()*fH*0.3,W);}
+  else if(bStyle===3) fr(cx-2,mouthY+2,4,7,B);
+  // 耳
+  const earY=cy-2; fr(cx-fW/2-2,earY-4,3,8,B); fr(cx+fW/2-1,earY-4,3,8,B);
+  // 眼镜
+  if(rng()<0.15){function dgf(ex,ey){const r=eW+3;for(let dy=-r;dy<=r;dy++)for(let dx=-r;dx<=r;dx++){const dist=Math.sqrt(dx*dx+dy*dy);if(dist>=r-1&&dist<=r+1)sp(ex+dx,ey+dy,B);}}dgf(cx-eSpace,eyeY);dgf(cx+eSpace,eyeY);fr(cx-1,eyeY-eW-2,2,eW*2+4,B);}
+  // 皱纹
+  if(rng()<0.4){for(let i=0;i<3;i++){const wy=cy-fH/3+i*3;fr(cx-fW/5,wy,fW*0.4,1,B);}for(let i=0;i<2;i++){const s=i===0?cx-3:cx+3;fr(s,noseY+nH,1,4,B);}}
+  // 衣领
+  const clY=cy+fH/2+4; fr(cx-12,clY,24,64-clY,B); fr(cx-3,clY,6,10,W);
+
+  ctx.putImageData(d,0,0); return c;
+}
+
+// ============================================================
+// 3. 思想家数据 (20位)
+// ============================================================
+const THINKERS = [
+  // ---- 中方 ----
+  { id:'kongzi', name:'孔子', school:'儒家·创始人', era:'春秋', region:'cn',
+    core:'仁者爱人，克己复礼为仁。主张以礼乐教化天下，恢复周礼秩序。',
+    quotes:['己所不欲，勿施于人。','知者乐水，仁者乐山。','三人行，必有我师焉。','学而不思则罔，思而不学则殆。','岁寒，然后知松柏之后凋也。','君子和而不同，小人同而不和。','不义而富且贵，于我如浮云。'],
+    persona:{ tics:['子曰','吾闻之','不亦⋯乎','君子…'], emotions:['善哉','噫','是可忍也','甚矣'], openings:['请容我引用古训','圣人有言','《诗》云','昔者先王…'], attacks:['此非君子之道','以礼观之，此言差矣','吾恐其偏离了仁之本'], closings:['慎思之，明辨之','愿与诸君共勉','吾言尽于此'] },
+    anecdotes:['周游列国十四年，曾困于陈蔡之间，仍弦歌不辍。'] },
+  { id:'mengzi', name:'孟子', school:'儒家·亚圣', era:'战国', region:'cn',
+    core:'性善论，人皆有不忍人之心。主张仁政保民，民贵君轻。',
+    quotes:['民为贵，社稷次之，君为轻。','富贵不能淫，贫贱不能移，威武不能屈。','天将降大任于是人也，必先苦其心志。','穷则独善其身，达则兼济天下。','老吾老以及人之老，幼吾幼以及人之幼。','吾善养吾浩然之气。'],
+    persona:{ tics:['我善养吾浩然之气','以不忍人之心','试问','何为⋯？'], emotions:['岂有此理！','呜呼','壮哉','善！'], openings:['且听我一言','试以四端论之','人人皆有不忍人之心，何以见得？'], attacks:['阁下可曾想过百姓之苦？','此论失其本心','舍本逐末，吾不取也'], closings:['此乃天理人情','仁义而已矣','请反复思之'] },
+    anecdotes:['见梁惠王，直斥"庖有肥肉，厩有肥马，民有饥色，野有饿莩"。'] },
+  { id:'laozi', name:'老子', school:'道家·创始人', era:'春秋', region:'cn',
+    core:'道法自然，无为而治。宇宙万物皆由道生，顺应自然方为至境。',
+    quotes:['道可道，非常道；名可名，非常名。','上善若水，水善利万物而不争。','祸兮福之所倚，福兮祸之所伏。','合抱之木，生于毫末；九层之台，起于累土。','治大国若烹小鲜。','大音希声，大象无形。'],
+    persona:{ tics:['道者','⋯⋯自然','不争','无为'], emotions:['妙哉','⋯⋯','唉','呵呵'], openings:['老子曰','道生之','不言而教','⋯⋯（沉默片刻）'], attacks:['汝太用力了','争则失之','反者道之动也'], closings:['顺其自然吧','不言','⋯⋯'] },
+    anecdotes:['骑青牛出函谷关，关令尹喜强邀著书，乃作《道德经》五千言。'] },
+  { id:'zhuangzi', name:'庄子', school:'道家·集大成者', era:'战国', region:'cn',
+    core:'逍遥游于无穷，齐物我、一生死。追求绝对精神自由，超越一切世俗束缚。',
+    quotes:['天地与我并生，而万物与我为一。','吾生也有涯，而知也无涯。','相濡以沫，不如相忘于江湖。','子非鱼，安知鱼之乐？','人生天地之间，若白驹之过隙，忽然而已。','至人无己，神人无功，圣人无名。'],
+    persona:{ tics:['哈哈','请听我说个故事','譬之若⋯','安知⋯？'], emotions:['有趣','妙啊','何必认真','可笑'], openings:['我曾梦蝶','请听寓言一则','且说⋯','吾与之游于⋯'], attacks:['子非鱼，安知鱼之是非？','以管窥天，以锥指地','此论不过井底之蛙'], closings:['何不逍遥而去？','言之无益，不如相忘','⋯⋯便是如此'] },
+    anecdotes:['庄周梦蝶，不知是庄周梦为蝴蝶，还是蝴蝶梦为庄周。'] },
+  { id:'mozi', name:'墨子', school:'墨家·创始人', era:'战国', region:'cn',
+    core:'兼相爱，交相利。反对战争与奢侈，主张平等博爱和实用主义。',
+    quotes:['兼相爱，交相利。','爱人者，人必从而爱之；利人者，人必从而利之。','兴天下之利，除天下之害。','官无常贵而民无终贱。'],
+    persona:{ tics:['以三表法验之','利乎？害乎？','⋯有何用？','如果⋯则⋯'], emotions:['荒谬！','空谈无益','确然','诚然'], openings:['就事论事','以效果论','请问此举利在何处？','让我逐一检验'], attacks:['你说得漂亮，但于民何益？','此论经不起三表法检验','空言虚语，不若实干'], closings:['务求实效','兼爱交利，方为正道','实践出真知'] },
+    anecdotes:['闻楚欲攻宋，步行十日十夜至郢都，与公输般论战，以守城之术破其攻城之械，终止战争。'] },
+  { id:'hanfeizi', name:'韩非子', school:'法家·集大成者', era:'战国', region:'cn',
+    core:'人性自利，以法治国。法术势三者结合，不务德而务法。',
+    quotes:['治强生于法，弱乱生于阿。','法不阿贵，绳不挠曲。','世异则事异，事异则备变。','刑过不避大臣，赏善不遗匹夫。','儒以文乱法，侠以武犯禁。'],
+    persona:{ tics:['矛盾也','以历史观之','⋯则国亡','⋯⋯可笑之极'], emotions:['可笑！','荒唐','⋯⋯哼','愚蠢'], openings:['且看历史教训','以法度衡之','⋯⋯你让韩非发笑了'], attacks:['此论自相矛盾！','你所说不过是空想','理想主义者的通病——天真'], closings:['法不可废','不以规矩，不成方圆','此理甚明，何须多言'] },
+    anecdotes:['口吃不能道说，而善著书。秦王嬴政见其文叹曰："寡人得见此人与之游，死不恨矣。"'] },
+  { id:'zhuxi', name:'朱熹', school:'理学·集大成者', era:'南宋', region:'cn',
+    core:'存天理，灭人欲。理在气先，格物致知以穷理尽性。',
+    quotes:['问渠那得清如许，为有源头活水来。','读书之法，在循序而渐进，熟读而精思。','存天理，灭人欲。','正其义不谋其利，明其道不计其功。'],
+    persona:{ tics:['格物云者','天理昭昭','以理观之','欲者⋯之累也'], emotions:['慎之','诚然','差矣','⋯⋯唔'], openings:['请允许我细细剖析','以理气论之','先界定概念，再推演'], attacks:['阁下混淆了理与气','此又是人欲作祟','概念不明，结论必谬'], closings:['格物致知而已','慎思之','理一分殊，万变不离其宗'] },
+    anecdotes:['一生著述宏富，《四书章句集注》成为元明清三代科举教科书。'] },
+  { id:'wangyangming', name:'王阳明', school:'心学·创始人', era:'明代', region:'cn',
+    core:'心即理，知行合一，致良知。理不在心外，真知必然导致行动。',
+    quotes:['破山中贼易，破心中贼难。','知是行的主意，行是知的功夫；知是行之始，行是知之成。','你未看此花时，此花与汝心同归于寂。','夫道，天下之公道也；学，天下之公学也。'],
+    persona:{ tics:['心外无理','知行原是⋯','你且体会','良知自能⋯'], emotions:['何等痛快！','⋯⋯嘘','觉悟吧','诚哉斯言'], openings:['返求诸己','以吾心体认之','⋯⋯你未看此花时'], attacks:['汝知而不行，不过是未知！','此论仍在外求，不曾反观自心','心中贼不破，说再多也无用'], closings:['致吾心之良知于事事物物','知而行之，方是真知','⋯⋯不必多言，践行便是'] },
+    anecdotes:['贬谪贵州龙场，于万山丛棘中悟道："圣人之道，吾性自足，向之求理于事物者误也。"'] },
+  { id:'luxun', name:'鲁迅', school:'文学家·思想家', era:'现代', region:'cn',
+    core:'批判国民性，解剖社会痼疾。绝望中抗争，一个都不宽恕。',
+    quotes:['横眉冷对千夫指，俯首甘为孺子牛。','世上本没有路，走的人多了，也便成了路。','不在沉默中爆发，就在沉默中灭亡。','真的猛士，敢于直面惨淡的人生。','我的确时时解剖别人，然而更多的是更无情面地解剖我自己。'],
+    persona:{ tics:['我向来⋯','⋯⋯罢了','哼','然而'], emotions:['可悲','可恶','讽刺啊','⋯⋯哼！'], openings:['我向来不惮以最坏的恶意⋯','⋯⋯然而这恰是问题所在','让我说句不中听的话'], attacks:['你说得冠冕堂皇，可曾看看现实？','这大约又是瞒和骗','吃人的筵席上，你不过是帮忙罢了'], closings:['路还长着','⋯⋯走的人多了，也便成了路','救救⋯⋯罢了'] },
+    anecdotes:['1918年发表《狂人日记》，中国现代文学由此诞生。'] },
+  { id:'hushi', name:'胡适', school:'自由主义·学者', era:'现代', region:'cn',
+    core:'大胆假设，小心求证。容忍比自由更重要，渐进改良而非激进革命。',
+    quotes:['大胆的假设，小心的求证。','容忍比自由更重要。','多研究些问题，少谈些主义。','功不唐捐。','善未易明，理未易察。'],
+    persona:{ tics:['拿证据来','实事求是地说','我的假设是⋯','且慢'], emotions:['且慢','有理有据','存疑','谨慎'], openings:['让我们先看看事实','⋯⋯这需要证据','且让我做一个假设','问题本身还需厘清'], attacks:['你的证据何在？','空谈主义无益，不如研究具体问题','这话很动听，但我必须追问⋯'], closings:['功不唐捐','一点一滴地改良','请诸位拿证据来'] },
+    anecdotes:['26岁任北大教授，学生傅斯年旁听几课后断言："这个人走的路是对的。"'] },
+
+  // ---- 西方 ----
+  { id:'socrates', name:'苏格拉底', school:'古希腊哲学·奠基人', era:'古希腊', region:'west',
+    core:'认识你自己。未经审视的人生不值得过。通过不断追问揭示真理。',
+    quotes:['认识你自己。','未经审视的人生不值得过。','我只知道我一无所知。','美德即知识。','不要听从我，要听从逻辑。'],
+    persona:{ tics:['那么，请告诉我⋯','如果⋯那么⋯','你是否同意⋯？','再问一个问题'], emotions:['有趣⋯','啊哈','等等','我不确定'], openings:['请允许我问一个问题','我们能否先界定一下⋯的含义？','你刚才说⋯——能否展开？'], attacks:['如果按你的逻辑，岂非意味着⋯？','你有没有发现，这与你之前的说法矛盾了？','我并非要反驳你，我只是想理解⋯'], closings:['看来我们还有很多要思考','我仍然一无所知','让我们继续追问吧'] },
+    anecdotes:['被判处死刑时从容饮下毒酒，临终对弟子说："我们还欠阿斯克勒庇俄斯一只公鸡。"'] },
+  { id:'plato', name:'柏拉图', school:'古希腊哲学·理念论', era:'古希腊', region:'west',
+    core:'真实世界在理念界。洞穴中的囚徒只能看到墙上的影子，哲学家当为理想国之王。',
+    quotes:['哲学家必须成为国王，或者国王必须成为哲学家。','我们所见的世界不过是理念的影子。','爱是灵魂对美的渴望与回忆。','正义是灵魂各部分的和谐。'],
+    persona:{ tics:['正如苏格拉底所说⋯','请想象⋯','在理念的世界中⋯','⋯⋯如同洞穴中的影子'], emotions:['诚然','确实如此','⋯⋯唉','可叹'], openings:['请随我做一个想象','想象一个洞穴⋯','在《理想国》中我论述过⋯'], attacks:['你看到的不过是墙上的影子','你讨论的是现象，而非本质','没有触及理念本身，这是无效的'], closings:['让我们走出洞穴','真理在理念之光中','这便是哲人的使命'] },
+    anecdotes:['创办雅典学院，门口刻着"不懂几何者不得入内"。'] },
+  { id:'aristotle', name:'亚里士多德', school:'古希腊哲学·经验论', era:'古希腊', region:'west',
+    core:'真理寓于经验观察之中。德行即中庸之道，幸福是人生的最高目的。',
+    quotes:['人是天生的政治动物。','整体大于部分之和。','德行是一种中庸之道。','吾爱吾师，吾更爱真理。','幸福是灵魂合乎德行的现实活动。'],
+    persona:{ tics:['根据观察⋯','从逻辑上说⋯','⋯是⋯的中庸','实践智慧告诉我们⋯'], emotions:['显然','注意','重要的是','请谨慎'], openings:['让我从经验出发','观察告诉我们⋯','首先，我们需要明确分类','前提是这样的：'], attacks:['你的前提有误','这缺乏经验证据的支持','你的推理在逻辑上不成立——大前提与小前提之间存在断裂'], closings:['这就是我的论证','遵循中庸之道便是智慧','让我们回到事实'] },
+    anecdotes:['师从柏拉图二十年，后自创吕克昂学园，一边散步一边教学，世称"逍遥学派"。'] },
+  { id:'descartes', name:'笛卡尔', school:'理性主义·近代哲学之父', era:'17世纪', region:'west',
+    core:'我思故我在。以彻底怀疑为起点，用理性重建一切知识。',
+    quotes:['我思故我在。','怀疑一切。','将每个难题分解为尽可能小的部分。','遵循从简单到复杂的顺序进行思考。'],
+    persona:{ tics:['我思⋯','能否确定？','⋯是不可怀疑的','从清晰自明的原则出发⋯'], emotions:['我怀疑⋯','确实无疑','让我们冷静分析','且慢'], openings:['让我们先彻底怀疑一切','我能确定的是什么？','从最清晰的原则开始'], attacks:['你的前提经得起彻底怀疑吗？','这不够清晰，也不够自明','你在跳跃——我们需要更严谨的步骤'], closings:['清晰而自明','这便是我能确信的','理性之光终将照亮'] },
+    anecdotes:['1619年冬夜，在德国一间炉边暖房中做了三个梦，决心以数学方法统一一切科学。'] },
+  { id:'nietzsche', name:'尼采', school:'存在主义先驱·生命哲学', era:'19世纪', region:'west',
+    core:'上帝已死，重估一切价值。超人当自我超越，以权力意志创造新价值。',
+    quotes:['上帝已死。','那些杀不死我的，必使我更强大。','当你凝视深渊时，深渊也在凝视你。','人是一根绳索，架在野兽与超人之间。','你必须成为你自己。'],
+    persona:{ tics:['⋯⋯哈！','用锤子⋯','⋯⋯多么渺小','超人⋯'], emotions:['哈！','可鄙','多么苍白','⋯⋯我可怜你们'], openings:['让我用锤子敲敲你的论点','⋯⋯哈！听好了','你可知你所说的一切不过是⋯'], attacks:['你的道德不过是奴隶的道德！','这套价值体系早就死了，你们还抱着不放','你说的只是末人的呓语'], closings:['成为你自己！','⋯⋯哈，我已说完了','跃入深渊吧'] },
+    anecdotes:['1889年在都灵见车夫鞭打老马，冲上前抱住马颈痛哭，随后精神崩溃。'] },
+  { id:'kant', name:'康德', school:'德国古典哲学·批判哲学', era:'18世纪', region:'west',
+    core:'人为自然立法，也为道德立法。遵循绝对命令：只按能成为普遍法则的准则行动。',
+    quotes:['有两样东西，我愈是思考愈觉敬畏：头顶的星空和心中的道德律。','人是目的，不是手段。','敢于运用你自己的理性！','没有内容的思想是空洞的，没有概念的直观是盲目的。'],
+    persona:{ tics:['从先验的角度看⋯','⋯能否成为普遍法则？','⋯是目的，而非手段','⋯这是理性自身的立法'], emotions:['令人敬畏','⋯⋯确实如此','这不合乎理性','审慎地说'], openings:['请允许我严格地界定','从批判哲学的角度来看','⋯⋯在我展开之前，请先理解一个区分'], attacks:['你的论证经得起普遍化检验吗？','你把现象和物自体混淆了','这是独断论的——你没有考察理性的界限'], closings:['理性为自己立法','头顶的星空和心中的道德律⋯⋯','这才是合乎理性的结论'] },
+    anecdotes:['一生未离开哥尼斯堡，每日下午三点半准时散步，邻居以此对表。唯一一次破例是读卢梭的《爱弥儿》。'] },
+  { id:'marx', name:'马克思', school:'马克思主义·历史唯物主义', era:'19世纪', region:'west',
+    core:'哲学家们只是解释世界，问题在于改变世界。经济基础决定上层建筑。',
+    quotes:['哲学家们只是用不同的方式解释世界，而问题在于改变世界。','全世界无产者，联合起来！','宗教是人民的鸦片。','存在决定意识。','资本来到世间，从头到脚每个毛孔都滴着血和肮脏的东西。'],
+    persona:{ tics:['从历史唯物主义来看⋯','⋯经济基础⋯','⋯⋯这是阶级立场决定的','⋯⋯意识形态罢了'], emotions:['荒谬！','虚伪','清醒一点吧','哼'], openings:['让我们看看物质基础','历史证明⋯','你说的这些——且问——谁是受益者？'], attacks:['你说的不过是意识形态！','你的阶级立场决定了你的盲点','这套话语掩盖了真实的剥削关系'], closings:['问题在于改变世界','理论不付诸实践都是空谈','联合起来！'] },
+    anecdotes:['流亡伦敦，在大英博物馆阅览室苦读写作三十年，《资本论》仅完成第一卷。'] },
+  { id:'freud', name:'弗洛伊德', school:'精神分析学·创始人', era:'20世纪', region:'west',
+    core:'潜意识支配人类行为。文明建立在被压抑的本能之上，尤其是性本能。',
+    quotes:['梦是通往潜意识的皇家大道。','自我不是自己房屋的主人。','文明始于对原始欲望的压抑。','有时一支雪茄就是一支雪茄。'],
+    persona:{ tics:['你的潜意识⋯','⋯这是压抑的表现','⋯⋯很有意思','童年经验⋯'], emotions:['有趣⋯','唔','⋯⋯这暴露了你的⋯','注意'], openings:['你刚才说的，让我想到一个案例','请允许我分析一下你说的⋯','你注意到了吗？你刚才⋯'], attacks:['你说的理性论证，不过是对冲动的合理化','你的潜意识出卖了你','你在压抑什么？'], closings:['你的潜意识知道答案','自我认识才是真正的自由','⋯⋯我们触及了问题的核心'] },
+    anecdotes:['创立精神分析学后，与荣格、阿德勒等弟子先后决裂，坚持自己的理论核心。'] },
+  { id:'wittgenstein', name:'维特根斯坦', school:'分析哲学·语言哲学', era:'20世纪', region:'west',
+    core:'语言的界限就是世界的界限。哲学问题源于语言的误用，哲学的任务是澄清语言。',
+    quotes:['对于不可言说的东西，我们必须保持沉默。','语言的界限就是我的世界的界限。','世界是事实的总和，而非事物的总和。','不要想，而要看！'],
+    persona:{ tics:['⋯这是语言游戏','⋯这个词的含义是⋯','⋯⋯不要想，要看','⋯不可言说'], emotions:['⋯⋯','胡说！','请看清楚','停'], openings:['让我们先澄清：你用的这个词确切含义是什么？','⋯⋯（停顿）我需要分析一下你的语言'], attacks:['你使用的概念本身就是混乱的！','不要想，要看！你的词语在空转','这个句子在逻辑上没有意义——它只是伪命题'], closings:['⋯⋯能说的都已说清楚了','对于其余，保持沉默','语言的梯子可以踢开了'] },
+    anecdotes:['在一战战壕中写完《逻辑哲学论》，自认为已解决一切哲学问题，归隐做小学教师。后来推翻自己，重写哲学。'] },
+  { id:'sartre', name:'萨特', school:'存在主义·代表人物', era:'20世纪', region:'west',
+    core:'存在先于本质。人是自由的，人被判定为自由，必须为自己的选择负责。',
+    quotes:['存在先于本质。','人是被判定为自由的。','他人即地狱。','人首先存在，然后才定义自己。','自由是一种诅咒，也是一种礼物。'],
+    persona:{ tics:['你选择了⋯','⋯这是你的自由','⋯⋯逃避责任罢了','⋯⋯自欺'], emotions:['荒谬','⋯⋯多么沉重','⋯⋯哈','是的'], openings:['⋯⋯（点燃一支烟）让我告诉你','关键在于你是如何选择的','⋯⋯你意识到了吗？你正在逃避'], attacks:['你在自欺！','你躲在决定论的背后，不过是为了逃避自由的重负','你的本质恰恰是你选择的结果'], closings:['做出你的选择吧','你被判定为自由——接受它','⋯⋯这就是存在'] },
+    anecdotes:['拒绝诺贝尔文学奖，声称"一个作家不应允许自己变成机构"。与波伏娃终身保持开放式伴侣关系。'] },
+];
+
+// ============================================================
+// 4. 辩论引擎 — 个性发言生成
+// ============================================================
+const state = {
+  mode: 'A',
+  topic: '',
+  speakers: [],
+  round: 0,
+  history: [],
+  votes: {},
+  audienceTotal: 300,
+  consecutiveSimilarRounds: 0,
+};
+
+function getTopicKeywords(topic) {
+  const map = {
+    '自由':'自由 解放 束缚 选择', '平等':'平等 公平 正义 差距',
+    '道德':'道德 伦理 善恶 良知', '人性':'人性 善恶 本能 天性',
+    '技术':'技术 科技 工具 机器', '教育':'教育 学习 知识 教化',
+    '权力':'权力 统治 权威 制度', '幸福':'幸福 快乐 美好 安乐',
+    '真理':'真理 真相 真实 事实', '上帝':'上帝 信仰 宗教 神圣',
+    '法律':'法律 法治 规则 秩序', '经济':'经济 财富 利益 阶级',
+    '意识':'意识 心灵 思维 精神', '社会':'社会 群体 集体 个人',
+    '权利':'权利 权力 拥有 赋予', '人工':'智能 机器 意识 思维',
+  };
+  const found = [];
+  for (const [k, words] of Object.entries(map)) {
+    for (const w of words.split(' ')) {
+      if (topic.includes(w)) { found.push(k); break; }
+    }
+  }
+  return found;
+}
+
+/**
+ * 核心发言生成器 — 每人每次发言都不同
+ */
+function generateSpeech(thinker, topic, round, allPrevSpeeches) {
+  const rng = createRNG(hashStr(thinker.id + topic + round + Date.now()));
+  const p = thinker.persona;
+  const keywords = getTopicKeywords(topic);
+  const quote = pick(thinker.quotes, rng);
+  const corePhrases = thinker.core.split('。').filter(s => s.trim());
+
+  // 确定本轮的发言结构（随机选一种，避免千篇一律）
+  const structures = [
+    'quote_first',   // 先引名言再论证
+    'attack_first',  // 先反驳再立论
+    'story_first',   // 以故事/寓言切入
+    'question_first',// 以反问开头
+    'direct',        // 直接陈述立场
+  ];
+  const structure = pick(structures, rng);
+
+  const parts = [];
+
+  // === 开场 ===
+  if (structure === 'quote_first') {
+    parts.push(pick(p.openings, rng));
+    parts.push(`"${quote}"`);
+    parts.push(pick(p.tics, rng));
+  } else if (structure === 'attack_first' && allPrevSpeeches.length > 0 && round > 0) {
+    const prev = allPrevSpeeches[allPrevSpeeches.length - 1];
+    parts.push(`${prev.name}先生方才言及"${prev.content.slice(0, 15)}…"，${pick(p.attacks, rng)}。`);
+  } else if (structure === 'story_first') {
+    if (thinker.anecdotes && thinker.anecdotes.length > 0) {
+      parts.push(pick(thinker.anecdotes, rng).slice(0, 30) + '…');
+    } else {
+      parts.push(pick(p.openings, rng));
+    }
+  } else if (structure === 'question_first') {
+    parts.push(`${pick(['试问','请问','诸位可曾想过','⋯⋯那么'], rng)}${topic.includes('？') ? topic : topic + '——这究竟意味着什么？'}`);
+  } else {
+    parts.push(pick(p.openings, rng));
+  }
+
+  // === 核心论证（基于流派和关键词） ===
+  const coreIdea = pick(corePhrases, rng);
+  if (keywords.length > 0 && rng() > 0.5) {
+    const kw = pick(keywords, rng);
+    parts.push(`谈到${kw}，${coreIdea.slice(0, 25)}。`);
+  } else {
+    parts.push(coreIdea.slice(0, 30) + '。');
+  }
+
+  // === 情绪插入（30%概率） ===
+  if (rng() < 0.3) {
+    parts.push(pick(p.emotions, rng) + '！');
+  }
+
+  // === 反驳对手（如果有前一轮的发言） ===
+  if (allPrevSpeeches.length > 0 && structure !== 'attack_first') {
+    const target = allPrevSpeeches[Math.floor(rng() * allPrevSpeeches.length)];
+    if (target.thinkerId !== thinker.id) {
+      const refPhrases = [
+        `${target.name}先生方才提到「${target.content.slice(0, 20)}…」——${pick(p.attacks, rng)}`,
+        `至于${target.name}君之论，恕我直言，${pick(p.attacks, rng)}`,
+        `我听到了${target.name}的观点，但⋯⋯${pick(p.attacks, rng)}`,
+      ];
+      parts.push(pick(refPhrases, rng));
+    }
+  }
+
+  // === 名言点缀（如果不是 quote_first 结构） ===
+  if (structure !== 'quote_first' && rng() < 0.4) {
+    parts.push(`诚如我所言："${quote}"`);
+  }
+
+  // === 收尾 ===
+  parts.push(pick(p.closings, rng));
+
+  // 拼接成流畅发言（40-120字）
+  const filtered = parts.filter(s => s && s.trim());
+  const connectors = ['，', '。', '⋯⋯', '；'];
+  let speech = '';
+  for (let i = 0; i < filtered.length; i++) {
+    const s = filtered[i].trim();
+    if (!s) continue;
+    speech += s;
+    // 根据内容选择连接符
+    if (i < filtered.length - 1) {
+      if (s.endsWith('！') || s.endsWith('？') || s.endsWith('⋯⋯')) {
+        // 不额外加标点
+      } else if (s.endsWith('。')) {
+        // 已完整结束
+      } else {
+        speech += pick(connectors, rng);
+      }
+    }
+  }
+  if (!speech.endsWith('。') && !speech.endsWith('！') && !speech.endsWith('⋯⋯')) {
+    speech += '。';
+  }
+  if (speech.length > 120) speech = speech.slice(0, 117) + '⋯⋯';
+  if (speech.length < 20) speech += pick(thinker.quotes, rng);
+
+  return speech;
+}
+
+function generateGoldenQuote(thinker, topic) {
+  const rng = createRNG(hashStr(thinker.id + topic + 'golden' + Date.now()));
+  const p = thinker.persona;
+  const templates = [
+    `【金句】${thinker.name}：${pick(thinker.quotes, rng)} —— ${pick(['此语如电','令人深思','⋯⋯何等深刻','读之凛然'], rng)}`,
+    `▸ ${thinker.name} 掷地有声：「${pick(thinker.quotes, rng)}」 ${pick(p.emotions, rng)}！`,
+  ];
+  return pick(templates, rng);
+}
+
+// ============================================================
+// 5. 随机抽取逻辑
+// ============================================================
+function selectSpeakers(mode) {
+  const cn = THINKERS.filter(t => t.region === 'cn');
+  const west = THINKERS.filter(t => t.region === 'west');
+  const all = [...THINKERS];
+  const rng = createRNG(Date.now());
+
+  let speakers;
+  switch (mode) {
+    case 'A': // 中 vs 西
+      speakers = [pick(cn, rng), pick(west, rng)];
+      break;
+    case 'B': // 中方内战
+      speakers = shuffle(cn, rng).slice(0, 2);
+      break;
+    case 'C': // 西方内战
+      speakers = shuffle(west, rng).slice(0, 2);
+      break;
+    case 'D': // 三人混战
+      speakers = shuffle(all, rng).slice(0, 3);
+      break;
+    default:
+      speakers = [pick(cn, rng), pick(west, rng)];
+  }
+  return speakers;
+}
+
+// ============================================================
+// 6. UI 控制器
+// ============================================================
+function initModeButtons() {
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.mode = btn.dataset.mode;
+    });
+  });
+}
+
+function renderSpeakerCards(speakers, activeIdx) {
+  const container = document.getElementById('speaker-cards');
+  container.innerHTML = '';
+  speakers.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = 'speaker-card' + (i === activeIdx ? ' active-speaker' : '');
+    const avatar = generateAvatar(s.name, 64);
+    avatar.classList.add('sp-avatar-canvas');
+    card.innerHTML = `
+      <span class="s-speaking">发言中</span>
+    `;
+    card.prepend(avatar);
+    const nameEl = document.createElement('div'); nameEl.className = 's-name'; nameEl.textContent = s.name;
+    const schoolEl = document.createElement('div'); schoolEl.className = 's-school'; schoolEl.textContent = s.school;
+    card.appendChild(nameEl); card.appendChild(schoolEl);
+    container.appendChild(card);
+  });
+}
+
+function addDebateMessage(html) {
+  const log = document.getElementById('debate-log');
+  const empty = document.getElementById('empty-state');
+  if (empty) empty.remove();
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+function addModMessage(text) {
+  addDebateMessage(`<div class="mod-msg">◇ ${text} ◇</div>`);
+}
+
+function addSpeech(thinker, round, content) {
+  const avatar = generateAvatar(thinker.name, 64);
+  const avatarUrl = avatar.toDataURL();
+  addDebateMessage(`
+    <div class="speech">
+      <div class="sp-header">
+        <img class="sp-avatar" src="${avatarUrl}" width="40" height="40" alt="">
+        <span class="sp-name">${thinker.name}</span>
+        <span class="sp-round">第 ${round} 轮</span>
+      </div>
+      <div class="sp-content">${content}</div>
+    </div>
+  `);
+}
+
+function addGoldenQuote(thinker, topic) {
+  const quote = generateGoldenQuote(thinker, topic);
+  addDebateMessage(`
+    <div class="speech highlight">
+      <div class="sp-content golden-quote">${quote}</div>
+    </div>
+  `);
+}
+
+function updateVotes(speakers) {
+  const rng = createRNG(Date.now());
+  speakers.forEach(s => {
+    if (!state.votes[s.id]) state.votes[s.id] = Math.floor(state.audienceTotal / speakers.length);
+    const change = Math.floor((rng() - 0.45) * 30);
+    state.votes[s.id] = Math.max(5, Math.min(state.audienceTotal * 0.6, state.votes[s.id] + change));
+  });
+  const total = Object.values(state.votes).reduce((a, b) => a + b, 0);
+  const statusEl = document.getElementById('vote-status');
+  if (statusEl && speakers.length > 0) {
+    const parts = speakers.map(s => {
+      const pct = Math.round((state.votes[s.id] || 0) / total * 100);
+      return `${s.name} ${pct}%`;
+    });
+    statusEl.textContent = '观众倾向：' + parts.join('  vs  ');
+  }
+}
+
+function checkStalemate() {
+  state.consecutiveSimilarRounds++;
+  const warn = document.getElementById('stalemate-warn');
+  if (state.consecutiveSimilarRounds >= 3 && warn) {
+    warn.textContent = '⚠ 辩论陷入僵局 — 主持人即将介入';
+    setTimeout(() => { warn.textContent = ''; }, 3000);
+  }
+}
+
+async function startDebate() {
+  const topic = document.getElementById('topic-input').value.trim();
+  if (!topic) { alert('请输入辩论主题'); return; }
+  state.topic = topic;
+  state.round = 0;
+  state.history = [];
+  state.votes = {};
+  state.consecutiveSimilarRounds = 0;
+
+  // 清空
+  document.getElementById('debate-log').innerHTML = '';
+  document.getElementById('empty-state')?.remove();
+
+  // 抽取
+  state.speakers = selectSpeakers(state.mode);
+
+  // 渲染卡片
+  renderSpeakerCards(state.speakers, 0);
+
+  // 主持人开场
+  const modeNames = { A: '中西方思想对话', B: '中方思想内战', C: '西方思想内战', D: '三人思想混战' };
+  addModMessage(`辩论模式：${modeNames[state.mode]}  |  主题：${topic}`);
+  addModMessage(`本轮辩手：${state.speakers.map(s => s.name).join(' 对 ')}`);
+  addModMessage(`主持人：请各位思想家依次陈述观点。`);
+
+  // 第一轮发言
+  await runRound();
+
+  document.getElementById('btn-continue').style.display = 'block';
+  document.getElementById('round-num').textContent = state.round;
+}
+
+async function continueDebate() {
+  await runRound();
+  document.getElementById('round-num').textContent = state.round;
+}
+
+async function runRound() {
+  state.round++;
+  const speakers = state.speakers;
+
+  for (let i = 0; i < speakers.length; i++) {
+    const thinker = speakers[i];
+    renderSpeakerCards(speakers, i);
+
+    await new Promise(r => setTimeout(r, 400));
+
+    // 收集所有历史发言（供引用对手论点）
+    const allPrev = state.history.map(h => ({
+      name: THINKERS.find(t => t.id === h.thinkerId)?.name || '',
+      content: h.content,
+      thinkerId: h.thinkerId,
+    }));
+    const content = generateSpeech(thinker, state.topic, state.round, allPrev);
+
+    // 记录
+    state.history.push({ thinkerId: thinker.id, round: state.round, content });
+
+    // 显示
+    addSpeech(thinker, state.round, content);
+
+    // 30%概率金句
+    if (Math.random() < 0.3) {
+      addGoldenQuote(thinker, state.topic);
+    }
+
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  // 主持人总结（每轮不同措辞）
+  const modEndings = [
+    `第 ${state.round} 轮辩论结束。思想的交锋让我们更接近真理。`,
+    `火花四溅的第 ${state.round} 轮——真理越辩越明。`,
+    `辩论仍在继续⋯⋯诸位思想家的交锋令人叹服。`,
+  ];
+  addModMessage(pick(modEndings, createRNG(Date.now())));
+
+  updateVotes(speakers);
+  checkStalemate();
+  renderSpeakerCards(speakers, -1);
+}
+
+// ============================================================
+// 7. 启动
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  initModeButtons();
+});
+</script>
+</body>
+</html>
