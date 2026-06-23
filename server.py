@@ -10,18 +10,21 @@ import requests
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 
-app = Flask(__name__, static_folder='.')
+# Get the absolute directory of this script
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+app = Flask(__name__, static_folder=BASE_DIR)
 CORS(app)
 
 DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
 
 @app.route('/')
 def index():
-    return send_from_directory('.', 'index.html')
+    return send_from_directory(BASE_DIR, 'index.html')
 
 @app.route('/<path:path>')
 def static_files(path):
-    return send_from_directory('.', path)
+    return send_from_directory(BASE_DIR, path)
 
 @app.route('/api/debate/speak', methods=['POST'])
 def debate_speak():
