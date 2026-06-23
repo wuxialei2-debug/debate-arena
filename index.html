@@ -404,6 +404,16 @@ header .subtitle {
         <button class="mode-btn" data-mode="D">三人混战</button>
       </div>
     </div>
+    <div class="setup-group">
+      <label>
+        AI 生成 <span style="font-size:11px;color:var(--gold-dim);font-weight:400;">(用 LLM 生成真实辩论)</span>
+      </label>
+      <div style="display:flex;gap:6px;margin-top:2px;">
+        <input id="api-key-input" type="password" placeholder="DeepSeek API Key（留空则用模板）" style="flex:1;background:var(--bg-panel);border:1px solid var(--gold-dim);color:var(--text-on-dark);padding:6px 8px;border-radius:3px;font-size:12px;font-family:var(--font-body);">
+        <button id="btn-toggle-apikey" onclick="toggleApiKeyVisible()" style="background:var(--wood-mid);border:none;color:var(--text-on-dark);padding:4px 8px;border-radius:3px;cursor:pointer;font-size:12px;">👁</button>
+      </div>
+      <div style="font-size:10px;color:var(--gold-dim);margin-top:2px;">填 Key 后 AI 生成真正辩论，留空用模板</div>
+    </div>
     <button id="btn-start" onclick="startDebate()">开 始 辩 论</button>
     <button id="btn-continue" onclick="continueDebate()">继 续 辩 论</button>
     <div style="margin-top:16px;text-align:center;font-size:10px;color:var(--gold-dim);">
@@ -607,8 +617,22 @@ const THINKERS = [
     anecdotes:['拒绝诺贝尔文学奖，声称"一个作家不应允许自己变成机构"。与波伏娃终身保持开放式伴侣关系。'] },
 ];
 
+// ---- API 配置 ----
+const API_BASE = '';
+let apiKey = '';
+
+function getApiKey() {
+    const input = document.getElementById('api-key-input');
+    return input ? input.value.trim() : '';
+}
+
+function toggleApiKeyVisible() {
+    const input = document.getElementById('api-key-input');
+    input.type = input.type === 'password' ? 'text' : 'password';
+}
+
 // ============================================================
-// 4. 辩论引擎 — 个性发言生成
+// 4. 辩论引擎 — AI 发言生成（带模板降级）
 // ============================================================
 const state = {
   mode: 'A',
@@ -754,6 +778,54 @@ function generateGoldenQuote(thinker, topic) {
     `▸ ${thinker.name} 掷地有声：「${pick(thinker.quotes, rng)}」 ${pick(p.emotions, rng)}！`,
   ];
   return pick(templates, rng);
+}
+
+// ---- AI 发言生成（调后端 API，失败时降级到模板） ----
+async function generateSpeechWithAI(thinker, topic, round, allPrevSpeeches) {
+  const key = getApiKey();
+  if (!key) {
+    // 没有 API Key，用模板生成
+    return generateSpeech(thinker, topic, round, allPrevSpeeches);
+  }
+
+  try {
+    const resp = await fetch(`${API_BASE}/api/debate/speak`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: key,
+        thinker: thinker,
+        topic: topic,
+        round: round,
+        history: allPrevSpeeches.map(h => ({
+          name: h.name,
+          content: h.content,
+          thinker_id: h.thinkerId,
+        })),
+      }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      console.warn('API 请求失败，降级到模板:', err.error || resp.statusText);
+      return generateSpeech(thinker, topic, round, allPrevSpeeches);
+    }
+
+    const data = await resp.json();
+    if (data.ok && data.speech) {
+      return data.speech;
+    }
+
+    return generateSpeech(thinker, topic, round, allPrevSpeeches);
+  } catch (e) {
+    if (e.name === 'TimeoutError' || e.name === 'AbortError') {
+      console.warn('API 超时，降级到模板');
+    } else {
+      console.warn('API 调用失败，降级到模板:', e.message);
+    }
+    return generateSpeech(thinker, topic, round, allPrevSpeeches);
+  }
 }
 
 // ============================================================
@@ -935,7 +1007,7 @@ async function runRound() {
       content: h.content,
       thinkerId: h.thinkerId,
     }));
-    const content = generateSpeech(thinker, state.topic, state.round, allPrev);
+    const content = await generateSpeechWithAI(thinker, state.topic, state.round, allPrev);
 
     // 记录
     state.history.push({ thinkerId: thinker.id, round: state.round, content });
