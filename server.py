@@ -22,10 +22,6 @@ DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions"
 def index():
     return send_from_directory(BASE_DIR, 'index.html')
 
-@app.route('/<path:path>')
-def static_files(path):
-    return send_from_directory(BASE_DIR, path)
-
 @app.route('/api/debate/speak', methods=['POST'])
 def debate_speak():
     data = request.get_json()
